@@ -2,6 +2,8 @@
 module NRX_SPRITE
 (
 	input					VCLKx4,
+	input	 [3:0]		GAME,
+
 	input					HBLK,
 
 	input	 [8:0]		HPOS,
@@ -13,7 +15,7 @@ module NRX_SPRITE
 	output [3:0]		ARAMADRS,
 	input	 [7:0]		ARAMDATA,
 
-	output [11:0]		SPCHRADR,
+	output [12:0]		SPCHRADR,
 	input	 [7:0]		SPCHRDAT,
 
 	output [7:0]		DROMAD,
@@ -21,6 +23,11 @@ module NRX_SPRITE
 
 	output reg [8:0]	SPCOL
 );
+
+// Hardware family flags
+wire is_konami     = ( GAME >= 4'd2 );	// jungler_spritelayout (planes {4,0}, swapped columns)
+wire spr_loco      = ( GAME >= 4'd3 );	// locomotn sprites: 7-bit code + combined flip
+wire spr_base_zero = ( GAME == 4'd5 );	// Commando scans more sprite slots
 
 reg [1:0] clkcnt;
 always @( posedge VCLKx4 ) clkcnt<=clkcnt+1;
@@ -44,20 +51,36 @@ reg	[8:0] SPWCL;
 
 wire [36:0] SPA  = SPATRS[{~SIDE,WRADR[7:4]}];
 
-wire	[3:0] SH	 = WRADR[3:0]+4'h4;
+// Column-group order within the 16-wide sprite: Namco uses [byte 8,16,24,0]
+// (SH[3:2]=WRADR[3:2]+1); the Konami jungler_spritelayout swaps groups 1<->3
+// (SH[3:2]=WRADR[3:2]^1). Pixel order within a group (SH[1:0]) is unchanged.
+wire	[3:0] SH	 = is_konami ? { WRADR[3:2]^2'b01, WRADR[1:0] }
+                             : ( WRADR[3:0] + 4'h4 );
 wire	[3:0] SV	 = SPA[35:32];
 
+// locomotn sprites combine flip into one bit (SPA[1] drives both X and Y);
+// Namco/Jungler keep an independent flipx (SPA[0]).
 wire	[2:0] SPFY = { 3{SPA[1]} };
-wire	[1:0] SPFX = { 1'b0, SPA[0] };
+wire	[1:0] SPFX = { 1'b0, spr_loco ? SPA[1] : SPA[0] };
 wire	[5:0] SPPL = SPA[29:24];
 
-assign SPCHRADR  = { SPA[7:2], ( SV[3] ^ SPA[1] ), ( SH[3:2] ^ SPFX ), ( SV[2:0] ^ SPFY ) };
+// Sprite code: 6-bit (Namco/Jungler) or 7-bit extended (locomotn-family):
+//   code = (spr&0x7c)>>2 + 0x20*(spr&0x01) + (spr&0x80)>>1
+wire	[6:0] SPCODE = spr_loco ? { SPA[7], SPA[0], SPA[6:2] } : { 1'b0, SPA[7:2] };
+
+assign SPCHRADR  = { SPCODE, ( SV[3] ^ SPA[1] ), ( SH[3:2] ^ SPFX ), ( SV[2:0] ^ SPFY ) };
 wire	[7:0] CHRO = SPCHRDAT;
+
+// Sprite pixel planes: Konami uses {4,0} (reversed vs Namco {0,4}); swap the bits.
+wire	[1:0] SPC  = SH[1:0] ^ {2{SPFX[0]}};
+wire			SPHI = CHRO[{1'b1, ~SPC}];	// plane bit at ROM bits 4-7
+wire			SPLO = CHRO[{1'b0, ~SPC}];	// plane bit at ROM bits 0-3
 
 
 wire	[8:0] YM = ( SPRADATA[15:8] + 8'h10 ) + (VPOS[7:0]+1);
 
-assign DROMAD = { 1'b0, (~SPA[19:17]), SPA[33:32], WRADR[3:2] };
+// Radar-dot gfx code: Namco ~radarattr[3:1], Konami ~radarattr[2:0].
+assign DROMAD = { 1'b0, ( is_konami ? ~SPA[18:16] : ~SPA[19:17] ), SPA[33:32], WRADR[3:2] };
 
 
 always @ ( posedge VCLKx2 ) begin
@@ -98,17 +121,14 @@ always @ ( posedge VCLKx2 ) begin
 			// Rend Sprite
 			if ( SPA[36] ) begin
 				HPOSW <= ( WRADR[3:0] ) ? (HPOSW+1) : { SPA[31], SPA[23:16] };
-				case ( SH[1:0] ^ {2{SPFX[0]}} )
-					2'b00: SPWCL <= { 1'b0, SPPL, CHRO[7], CHRO[3] };
-					2'b01: SPWCL <= { 1'b0, SPPL, CHRO[6], CHRO[2] };
-					2'b10: SPWCL <= { 1'b0, SPPL, CHRO[5], CHRO[1] };
-					2'b11: SPWCL <= { 1'b0, SPPL, CHRO[4], CHRO[0] };
-				endcase
+				SPWCL <= is_konami ? { 1'b0, SPPL, SPLO, SPHI }
+				                   : { 1'b0, SPPL, SPHI, SPLO };
 				WRADR <= WRADR+1;
 			end
 			// Rend Rader-dot
 			else begin
-				HPOSW <= ( WRADR[3:0] ) ? (HPOSW+1) : {(~SPA[16]),SPA[7:0]};
+				// Radar-dot X high bit: Namco ~radarattr[0], Konami ~radarattr[3].
+				HPOSW <= ( WRADR[3:0] ) ? (HPOSW+1) : {( is_konami ? ~SPA[19] : ~SPA[16] ),SPA[7:0]};
 				SPWCL <= ( DROMDT[1:0] != 2'b11 ) ? { 1'b1, 6'b000100, DROMDT[1:0] } : 0;
 				WRADR <= WRADR+4;
 			end
@@ -119,7 +139,7 @@ always @ ( posedge VCLKx2 ) begin
 
 	// in H-DISP
 	else begin
-		SPRAADRS <= 10'h14;
+		SPRAADRS <= spr_base_zero ? 10'h00 : 10'h14;	// Commando scans more sprites
 		WWADR <= 0;
 		WRADR <= 0;
 		SPWCL <= 0;

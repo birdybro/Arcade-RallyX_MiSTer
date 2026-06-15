@@ -147,8 +147,8 @@ wire	[2:0]		BGFY = { ATTR[7], ATTR[7], ATTR[7] };
 //   code = (code & 0x7f) + 2*(attr & 0x40) + 2*(code & 0x80)
 wire	[8:0]		TCODE = tile_loco ? { CHRC[7], ATTR[6], CHRC[6:0] } : { 1'b0, CHRC };
 
-wire	[11:0]	SPCHRADR;
-wire	[12:0]	CHRA = oHB ? { 1'b0, SPCHRADR } : { TCODE, ( HP[2] ^ BGFX ), ( VP[2:0] ^ BGFY ) };
+wire	[12:0]	SPCHRADR;
+wire	[12:0]	CHRA = oHB ? SPCHRADR : { TCODE, ( HP[2] ^ BGFX ), ( VP[2:0] ^ BGFY ) };
 
 wire	[7:0]		CHRO;
 // 8K char/sprite ROM (locomotn-family); Namco/Jungler use the lower 4K.
@@ -186,7 +186,7 @@ end
 //  Sprite Engine
 //----------------------------------------
 wire [8:0] SPCOL;
-NRX_SPRITE speng( VCLKx4, oHB, HPOS, VPOS, SPRAADRS, { ATTR, CHRC }, ARAMADRS, ARDT, SPCHRADR, CHRO, DROMAD, DROMDT, SPCOL );
+NRX_SPRITE speng( VCLKx4, GAME, oHB, HPOS, VPOS, SPRAADRS, { ATTR, CHRC }, ARAMADRS, ARDT, SPCHRADR, CHRO, DROMAD, DROMDT, SPCOL );
 
 
 //----------------------------------------
