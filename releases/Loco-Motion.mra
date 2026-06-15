@@ -1,0 +1,52 @@
+<misterromdescription>
+	<name>Loco-Motion</name>
+	<setname>locomotn</setname>
+	<rbf>rallyx</rbf>
+	<mameversion>0262</mameversion>
+	<year>1982</year>
+	<manufacturer>Konami (Centuri license)</manufacturer>
+	<category>Maze</category>
+	<rotation>vertical (cw)</rotation>
+	<resolution>15kHz</resolution>
+	<players>2</players>
+	<joystick>4-way</joystick>
+	<num_buttons>1</num_buttons>
+	<buttons names="Fire,Start 1P,Start 2P,Coin,Pause" default="A,Start,Select,R,L"/>
+
+	<!-- DIP word: byte0 = DSW1 (bit7 is the live P1-down input), byte1 = DSW2 -->
+	<switches default="FF,FF">
+		<dip name="Demo Sounds"   bits="0"   ids="Off,On"/>
+		<dip name="Intermissions" bits="1"   ids="Off,On"/>
+		<dip name="Cabinet"       bits="3"   ids="Upright,Cocktail"/>
+		<dip name="Lives"         bits="4,5" ids="255,5,4,3"/>
+		<dip name="Coin A"        bits="8,11"  ids="Free Play,1C/1C,1C/2C,1C/3C,1C/4C,1C/5C,1C/6C,2C/1C,3C/1C,4C/1C,5C/1C,6C/1C,7C/1C,8C/1C,1C/1C,1C/1C"/>
+		<dip name="Coin B"        bits="12,15" ids="No Coin B,1C/1C,1C/2C,1C/3C,1C/4C,1C/5C,1C/6C,2C/1C,3C/1C,4C/1C,5C/1C,6C/1C,7C/1C,8C/1C,1C/1C,1C/1C"/>
+	</switches>
+
+	<!-- game-select byte: 4 = Loco-Motion (must precede the main ROM) -->
+	<rom index="1"><part>04</part></rom>
+
+	<rom index="0" md5="none" zip="locomotn.zip">
+		<!-- maincpu @ 0x0000 -->
+		<part crc="b43e689a" name="1a.cpu"/>
+		<part crc="529c823d" name="2a.cpu"/>
+		<part crc="c9dbfbd1" name="3.cpu"/>
+		<part crc="caf6431c" name="4.cpu"/>
+		<part crc="64cf8dd6" name="5.cpu"/>
+		<part repeat="0x3000">FF</part>
+		<!-- gfx1 (chars/sprites) @ 0x8000 -->
+		<part crc="5732eda9" name="5l_c1.bin"/>
+		<part crc="c3035300" name="c2.cpu"/>
+		<!-- gfx2 (radar dots) @ 0xA000 -->
+		<part crc="2ef89356" name="10g.bpr"/>
+		<part repeat="0xF00">FF</part>
+		<!-- palette PROM @ 0xB000 -->
+		<part crc="75b05da0" name="8b.bpr"/>
+		<part repeat="0xE0">FF</part>
+		<!-- colour lookup PROM @ 0xB100 -->
+		<part crc="aa6cf063" name="9d.bpr"/>
+		<part repeat="0xE00">FF</part>
+		<!-- sound CPU ROM @ 0xC000 -->
+		<part crc="a1105714" name="1b_s1.bin"/>
+	</rom>
+</misterromdescription>

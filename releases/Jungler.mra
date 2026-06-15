@@ -1,0 +1,50 @@
+<misterromdescription>
+	<name>Jungler</name>
+	<setname>jungler</setname>
+	<rbf>rallyx</rbf>
+	<mameversion>0262</mameversion>
+	<year>1981</year>
+	<manufacturer>Konami (Stern Electronics license)</manufacturer>
+	<category>Maze</category>
+	<rotation>vertical (cw)</rotation>
+	<resolution>15kHz</resolution>
+	<players>2</players>
+	<joystick>4-way</joystick>
+	<num_buttons>1</num_buttons>
+	<buttons names="Fire,Start 1P,Start 2P,Coin,Pause" default="A,Start,Select,R,L"/>
+
+	<!-- DIP word: byte0 = DSW1 (bit7 is the live P1-down input, no DIPs), byte1 = DSW2 -->
+	<switches default="FF,BF">
+		<dip name="Coin A"  bits="8,10"  ids="4C/3C,4C/1C,3C/1C,2C/1C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+		<dip name="Coin B"  bits="11,13" ids="4C/3C,4C/1C,3C/1C,2C/1C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+		<dip name="Cabinet" bits="14"    ids="Upright,Cocktail"/>
+		<dip name="Test (255 Lives)" bits="15" ids="On,Off"/>
+	</switches>
+
+	<!-- game-select byte: 2 = Jungler (must precede the main ROM) -->
+	<rom index="1"><part>02</part></rom>
+
+	<rom index="0" md5="none" zip="jungler.zip">
+		<!-- maincpu @ 0x0000 -->
+		<part crc="5bd6ad15" name="jungr1"/>
+		<part crc="dc99f1e3" name="jungr2"/>
+		<part crc="3dcc03da" name="jungr3"/>
+		<part crc="f92e9940" name="jungr4"/>
+		<part repeat="0x4000">FF</part>
+		<!-- gfx1 (chars/sprites) @ 0x8000 -->
+		<part crc="924262bf" name="5k"/>
+		<part crc="131a08ac" name="5m"/>
+		<part repeat="0x1000">FF</part>
+		<!-- gfx2 (radar dots) @ 0xA000 -->
+		<part crc="c59c51b7" name="82s129.10g"/>
+		<part repeat="0xF00">FF</part>
+		<!-- palette PROM @ 0xB000 -->
+		<part crc="55a7e6d1" name="18s030.8b"/>
+		<part repeat="0xE0">FF</part>
+		<!-- colour lookup PROM @ 0xB100 -->
+		<part crc="d223f7b8" name="tbp24s10.9d"/>
+		<part repeat="0xE00">FF</part>
+		<!-- sound CPU ROM @ 0xC000 -->
+		<part crc="f86999c3" name="1b"/>
+	</rom>
+</misterromdescription>

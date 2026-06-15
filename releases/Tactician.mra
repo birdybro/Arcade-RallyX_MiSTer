@@ -1,0 +1,53 @@
+<misterromdescription>
+	<name>Tactician</name>
+	<setname>tactcian</setname>
+	<rbf>rallyx</rbf>
+	<mameversion>0262</mameversion>
+	<year>1981</year>
+	<manufacturer>Konami (Sega license)</manufacturer>
+	<category>Maze</category>
+	<rotation>vertical (cw)</rotation>
+	<resolution>15kHz</resolution>
+	<players>2</players>
+	<joystick>4-way</joystick>
+	<num_buttons>2</num_buttons>
+	<buttons names="Fire,Fire 2,Start 1P,Start 2P,Coin,Pause" default="A,B,Start,Select,R,L"/>
+
+	<!-- DIP word: byte0 = DSW1 (bit7 is the live P1-down input), byte1 = DSW2 -->
+	<switches default="FF,FF">
+		<dip name="Bonus Life" bits="0"   ids="10k/80k then 100k,20k/80k then 100k"/>
+		<dip name="Coinage"    bits="1,2" ids="4C/1C,3C/1C,2C/1C,1C/1C"/>
+		<dip name="Cabinet"    bits="3"   ids="Upright,Cocktail"/>
+		<dip name="Lives"      bits="4,5" ids="3,4,5,255"/>
+		<dip name="Coin Mode"  bits="8"   ids="Mode 1,Mode 2"/>
+	</switches>
+
+	<!-- game-select byte: 3 = Tactician (must precede the main ROM) -->
+	<rom index="1"><part>03</part></rom>
+
+	<rom index="0" md5="none" zip="tactcian.zip">
+		<!-- maincpu @ 0x0000 -->
+		<part crc="99163e39" name="tacticia.001"/>
+		<part crc="6d3e8a69" name="tacticia.002"/>
+		<part crc="0f71d0fa" name="tacticia.003"/>
+		<part crc="5e15f3b3" name="tacticia.004"/>
+		<part crc="76456106" name="tacticia.005"/>
+		<part crc="b33ca9ea" name="tacticia.006"/>
+		<part repeat="0x2000">FF</part>
+		<!-- gfx1 (chars/sprites) @ 0x8000 -->
+		<part crc="5d3ee965" name="tacticia.c1"/>
+		<part crc="e8c59c4f" name="tacticia.c2"/>
+		<!-- gfx2 (radar dots) @ 0xA000 -->
+		<part crc="88b0b511" name="tact6301.004"/>
+		<part repeat="0xF00">FF</part>
+		<!-- palette PROM @ 0xB000 -->
+		<part crc="b7ef83b7" name="tact6331.002"/>
+		<part repeat="0xE0">FF</part>
+		<!-- colour lookup PROM @ 0xB100 -->
+		<part crc="a92796f2" name="tact6301.003"/>
+		<part repeat="0xE00">FF</part>
+		<!-- sound CPU ROM @ 0xC000 -->
+		<part crc="97d145a7" name="tacticia.s2"/>
+		<part crc="067f781b" name="tacticia.s1"/>
+	</rom>
+</misterromdescription>

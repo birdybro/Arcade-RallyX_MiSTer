@@ -93,8 +93,19 @@ Existing core (`rtl/fpga_nrx.v`, `nrx_video.v`, `nrx_sprite.v`, `nrx_sound.v`,
 > **Progress:** Phase 0 ✅ (`dadc4c9`), Phase 1 ✅ (`e15e51a`). Phase 2 split into sub-phases
 > for risk isolation (video can't be pixel-verified without ROMs/Quartus here):
 > 2a ✅ tilemap, 2b ✅ sprites+dots, 2c ⏳ rotation/visarea/palette-weighting + starfield.
-> Phases 3–5 pending. The starfield needs the Galaxian/Scramble star-circuit reference (LFSR
-> taps + enable), deferred from 2b to 2c rather than guessed.
+> **Phase 4 ✅ done** (4 MRAs, offsets validated). Phase 3 (sound) and Phase 5 pending.
+> The starfield needs the Galaxian/Scramble star-circuit reference (LFSR taps + enable),
+> deferred from 2b to 2c rather than guessed.
+>
+> **To test Phases 0–2 on hardware:** rebuild the RBF in Quartus 17.0.x (the `releases/*.rbf`
+> is the old build) and load a new `.mra` against it. Games will run **silent** (sound is
+> Phase 3) but should boot and render. Watch for: locomotn-family tile/sprite flip direction,
+> sprite column-group order, palette balance, sideways image (ROT90, Phase 2c).
+>
+> **Known input refinements (not yet wired):** the core has only one fire button (Rally-X);
+> Tactician and Commando have a 2nd button (needs a CONF_STR J-line + emu extension), and
+> Commando's primary fire is read from DSW1 bit6, not P1 bit3. Jungler and Loco-Motion are
+> 1-button and fully mapped.
 > Deviations: the 14.318 MHz sound PLL output + audio mux moved to Phase 3 (consumer there);
 > the unified Konami ROM download map (program $0000, gfx1 $8000, dots $A000, palette $B000,
 > CLUT $B100, sound $C000) is implemented in the ROM gates and must be matched by the MRAs,
