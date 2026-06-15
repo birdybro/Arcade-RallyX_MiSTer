@@ -6,6 +6,8 @@ module fpga_NRX
 	input				RESET,		// RESET
 	input				CLK24M,		// Clock 24.576MHz
 
+	input	  [3:0]	GAME,			// Game select (0=RallyX,1=NewRallyX,2=Jungler,3=Tactician,4=LocoMotion,5=Commando)
+
 	input	  [8:0]	HP,			// VIDEO H-POSITION input
 	input   [8:0]	VP,			// VIDEO V-POSITION input
 	output			PCLK,			// PIXEL Clock output

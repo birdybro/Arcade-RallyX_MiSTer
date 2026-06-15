@@ -29,18 +29,14 @@ is: extend the existing core into a **multi-game RBF** that selects between the 
 (Rally-X / New Rally-X) datapath and the Konami (Loco-Motion) datapath via a game-select
 byte delivered in the MRA, plus four new `.mra` files.
 
-### Recommended architecture decision
+### Architecture decision — CONFIRMED
 
-**Single multi-game RBF with a game-select byte (MRA `<rom index="1">`).** This matches the
-MiSTer convention (Pac-Man, Galaga-family cores) and the user's "add to *this* core" intent.
-The alternative — a separate `locomotn` RBF — duplicates the shared video/CPU scaffolding and
-splits maintenance. Cost of the single-RBF approach: both sound subsystems are synthesised and
-the Konami one (2× AY + 2nd Z80) is gated off for Rally-X. Given the small device footprint of
-these chips on a 5CSEBA6U23I7, this is acceptable.
-
-> **Open question for the user:** confirm single-RBF multi-game vs. a dedicated `locomotn`
-> core. The phases below assume single-RBF. If a separate core is preferred, Phases 1–3 are
-> unchanged; only the scaffolding in Phase 0 and the `.qsf`/release naming differ.
+**Single multi-game RBF with a game-select byte (MRA `<rom index="1">`).** Confirmed by the user
+(2026-06-14): keep one core, no separate `locomotn` RBF. This matches the MiSTer convention
+(Pac-Man, Galaga-family cores) and the "add to *this* core" intent. Cost: both sound subsystems
+are synthesised and the Konami one (2× AY + 2nd Z80) is gated off for Rally-X — acceptable on a
+5CSEBA6U23I7. The existing `rallyx` RBF name is retained; all six games (Rally-X, New Rally-X,
+Jungler, Tactician, Loco-Motion, Commando) ship as `.mra` variants of it.
 
 ---
 
@@ -315,7 +311,7 @@ sound   : csega8 4K
 
 ## 6. Risks, unknowns & decisions
 
-- **[Decision] Single RBF vs separate core** — see §1. Confirm with user before Phase 0.
+- **[Decision] Single RBF vs separate core** — RESOLVED: single multi-game RBF (see §1).
 - **[Risk] Sound subsystem is the critical path.** A 2nd Z80 + 2× AY + filters is the bulk of
   the work and the biggest fidelity risk. Mitigate by bringing it up standalone (feed it canned
   command bytes, scope the AY register writes) before integrating. jt49 is well-proven, lowering

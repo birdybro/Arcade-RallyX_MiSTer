@@ -213,6 +213,19 @@ always @(posedge clk_sys)
 	if (ioctl_wr && (ioctl_index==254) && (ioctl_addr==0))
 		dips <= ioctl_dout;
 
+// Game-select byte, delivered via MRA <rom index="1">.
+//   0 = Rally-X        1 = New Rally-X     (Namco hardware)
+//   2 = Jungler        3 = Tactician
+//   4 = Loco-Motion    5 = Commando        (Konami "Loco-Motion" hardware)
+// Defaults to 0 so the existing Namco MRAs (which omit the byte) keep working.
+reg [3:0] game = 4'd0;
+always @(posedge clk_sys)
+	if (ioctl_wr && (ioctl_index==1) && (ioctl_addr==0))
+		game <= ioctl_dout[3:0];
+
+// High-level hardware family select: Konami Loco-Motion vs Namco Rally-X.
+wire is_konami = (game >= 4'd2);
+
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_hdmi;
@@ -366,8 +379,9 @@ wire  [7:0] iCTR2 = ~{ m_coin2, m_start2, m_up2, m_down2, m_right2, m_left2, m_t
 wire  [7:0] oPIX;
 wire  [7:0] oSND;
 
-fpga_NRX GameCore ( 
+fpga_NRX GameCore (
 	.RESET(iRST),.CLK24M(clk_24M),
+	.GAME(game),
 	.HP(HPOS),.VP(VPOS),.PCLK(PCLK),
 	.POUT(oPIX),.SND(oSND),
 	.DSW(~dips),.CTR1(iCTR1),.CTR2(iCTR2),
