@@ -5,6 +5,8 @@ module NRX_VIDEO
 (
 	input				 VCLKx4,		// 24.976MHz
 
+	input  [3:0]		GAME,			// Game select (see fpga_nrx.v)
+
 	input  [8:0]		HPOSi,
 	input  [8:0]		VPOSi,
 	output				PCLK,
@@ -34,6 +36,13 @@ wire [8:0] HPOS = HPOSi+2;
 wire [8:0] VPOS = VPOSi+(HPOSi>=504);
 
 //-----------------------------------------
+//  Hardware family flags
+//-----------------------------------------
+wire is_konami     = ( GAME >= 4'd2 );	// Jungler/Tactician/Loco-Motion/Commando
+wire tile_loco     = ( GAME >= 4'd3 );	// Tactician/Loco-Motion/Commando (locomotn tile_info, 0x2000 gfx1)
+wire tile_prio_off = ( GAME == 4'd2 );	// Jungler disables tile priority
+
+//-----------------------------------------
 //  Clock generators
 //-----------------------------------------
 reg VCLKx2;
@@ -54,7 +63,8 @@ reg [7:0] BGVSCR;
 
 always @ ( posedge CPUCLK ) begin
 	if ( ( CPUADDR == 16'hA130 ) & CPUME & CPUWE ) begin
-		BGHSCR <= CPUDI-3;
+		// Rally-X applies set_scrolldx(3,3); the Konami games do not.
+		BGHSCR <= is_konami ? CPUDI : (CPUDI-3);
 	end
 	if ( ( CPUADDR == 16'hA140 ) & CPUME & CPUWE ) begin
 		BGVSCR <= CPUDI;
@@ -97,7 +107,9 @@ wire	[7:0]		V0DO, V1DO;
 
 wire				CEV0	= ( ( CPUADDR[15:12] == 4'b1000 ) & (~CPUADDR[11]) ) & CPUME;
 wire				CEV1	= ( ( CPUADDR[15:12] == 4'b1000 ) &   CPUADDR[11]  ) & CPUME;
-wire				CEAT  = (   CPUADDR[15:4]  == 12'b1010_0000_0000         ) & CPUME;
+// Radar/bullet attribute latch: Namco $A000-$A00F, Konami $A000-$A0FF (mirror 0x00f0)
+wire				CEAT  = ( is_konami ? ( CPUADDR[15:8] == 8'hA0 )
+                                    : ( CPUADDR[15:4] == 12'b1010_0000_0000 ) ) & CPUME;
 
 wire	[7:0]		DTV0	= CEV0 ? V0DO : 8'h00;
 wire	[7:0]		DTV1	= CEV1 ? V1DO : 8'h00;
@@ -119,20 +131,29 @@ GDPRAM #(11,8) vram0( VCLKx4, VRAMADRS, CHRC, wram0_clk, wram0_addr, wram0_we, w
 GDPRAM #(11,8)	vram1( VCLKx4, VRAMADRS, ATTR, CPUCLK, CPUADDR[10:0], ( CPUWE & CEV1 ), CPUDI, V1DO );  
 GDPRAM #(4,8)	aram0( VCLKx4, ARAMADRS, ARDT, CPUCLK, CPUADDR[3:0],  ( CPUWE & CEAT ), CPUDI );
 
-wire				BGF = ATTR[5];
+// Tile priority/category bit (ATTR[5]); Jungler disables tile priority.
+wire				BGF = tile_prio_off ? 1'b0 : ATTR[5];
 
 
 //----------------------------------------
 //  BG/Sprite chip data reader
 //----------------------------------------
-wire				BGFX = ATTR[6];
+// Flip: Namco/Jungler use independent flipx=ATTR[6]; locomotn-family combine
+// flip into ATTR[7] (drives both X and Y). flipy is ATTR[7] in all cases.
+wire				BGFX = tile_loco ? ATTR[7] : ATTR[6];
 wire	[2:0]		BGFY = { ATTR[7], ATTR[7], ATTR[7] };
 
+// Tile code: 8-bit (Namco/Jungler) or 9-bit extended (locomotn-family, 0x2000 gfx1):
+//   code = (code & 0x7f) + 2*(attr & 0x40) + 2*(code & 0x80)
+wire	[8:0]		TCODE = tile_loco ? { CHRC[7], ATTR[6], CHRC[6:0] } : { 1'b0, CHRC };
+
 wire	[11:0]	SPCHRADR;
-wire	[11:0]	CHRA = oHB ? SPCHRADR : { CHRC, ( HP[2] ^ BGFX ), ( VP[2:0] ^ BGFY ) };
+wire	[12:0]	CHRA = oHB ? { 1'b0, SPCHRADR } : { TCODE, ( HP[2] ^ BGFX ), ( VP[2:0] ^ BGFY ) };
 
 wire	[7:0]		CHRO;
-DLROM #(12,8)  chrrom(VCLKx4,CHRA,CHRO, ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:12]==4'h4));
+// 8K char/sprite ROM (locomotn-family); Namco/Jungler use the lower 4K.
+DLROM #(13,8)  chrrom(VCLKx4,CHRA,CHRO, ROMCL,ROMAD,ROMDT,
+	ROMEN & ( is_konami ? ( ROMAD[15:13] == 3'b100 ) : ( ROMAD[15:12] == 4'h4 ) ));
 
 
 //----------------------------------------
@@ -140,7 +161,8 @@ DLROM #(12,8)  chrrom(VCLKx4,CHRA,CHRO, ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:12]=
 //----------------------------------------
 wire  [7:0] 	DROMAD;
 wire  [7:0] 	DROMDT;
-DLROM #(8,8)	dotrom(VCLKx4,DROMAD,DROMDT, ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:8]==8'h50));
+DLROM #(8,8)	dotrom(VCLKx4,DROMAD,DROMDT, ROMCL,ROMAD,ROMDT,
+	ROMEN & ( is_konami ? ( ROMAD[15:8]==8'hA0 ) : ( ROMAD[15:8]==8'h50 ) ));
 
 
 //----------------------------------------
@@ -149,14 +171,15 @@ DLROM #(8,8)	dotrom(VCLKx4,DROMAD,DROMDT, ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:8]
 wire [5:0] BGPL = ATTR[5:0];
 reg  [7:0] BGCOL;
 
+// Konami games use char planes {4,0} (reversed vs Namco {0,4}) -> swap the two
+// color bits. Pixel/column order within the tile is identical for both layouts.
+wire [1:0] BGTC = HP[1:0]^{2{BGFX}};
+wire       BGLO = CHRO[{1'b0,BGTC}];	// plane bit at ROM bits 0-3
+wire       BGHI = CHRO[{1'b1,BGTC}];	// plane bit at ROM bits 4-7
+
 always @ ( posedge VCLK ) begin
-	case ( HP[1:0]^{2{BGFX}} )
-		2'b00: BGCOL <= { BGPL, CHRO[4], CHRO[0] };
-		2'b01: BGCOL <= { BGPL, CHRO[5], CHRO[1] };
-		2'b10: BGCOL <= { BGPL, CHRO[6], CHRO[2] };
-		2'b11: BGCOL <= { BGPL, CHRO[7], CHRO[3] };
-	endcase
-end	
+	BGCOL <= is_konami ? { BGPL, BGLO, BGHI } : { BGPL, BGHI, BGLO };
+end
 
 
 //----------------------------------------
@@ -174,11 +197,13 @@ wire bSPTRANSP = ( SPCOL[1:0] == 2'b00 );
 
 wire	[7:0]		OUTCOL = ( bBGOPAQUE | bSPTRANSP ) ? BGCOL : SPCOL[7:0];
 wire	[3:0]		CLUT;
-DLROM #(8,4)	colorlt(~VCLKx4,OUTCOL,CLUT, ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:8]==8'h52));
+DLROM #(8,4)	colorlt(~VCLKx4,OUTCOL,CLUT, ROMCL,ROMAD,ROMDT,
+	ROMEN & ( is_konami ? ( ROMAD[15:8]==8'hB1 ) : ( ROMAD[15:8]==8'h52 ) ));
 
 wire	[4:0]		PALA = SPCOL[8] ? SPCOL[4:0] : { 1'b0, CLUT };
 wire	[7:0]		PALO;
-DLROM #(5,8)	palette(VCLKx4,PALA,PALO,  ROMCL,ROMAD,ROMDT,ROMEN & (ROMAD[15:5]=={8'h53,3'b000}));
+DLROM #(5,8)	palette(VCLKx4,PALA,PALO,  ROMCL,ROMAD,ROMDT,
+	ROMEN & ( is_konami ? ( ROMAD[15:5]=={8'hB0,3'b000} ) : ( ROMAD[15:5]=={8'h53,3'b000} ) ));
 
 
 //----------------------------------------

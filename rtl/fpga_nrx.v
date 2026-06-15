@@ -191,8 +191,8 @@ T80s z80(
 //--------------------------------------------------
 //  VIDEO
 //--------------------------------------------------
-NRX_VIDEO video( 
-	.VCLKx4(CLK),  .HPOSi(HP), .VPOSi(VP), .PCLK(PCLK), .POUT(POUT), 
+NRX_VIDEO video(
+	.VCLKx4(CLK),  .GAME(GAME), .HPOSi(HP), .VPOSi(VP), .PCLK(PCLK), .POUT(POUT),
 	.CPUCLK(CCLK), .CPUADDR(ad),
 	.CPUDI(odt),   .CPUDO(viddata),
 	.CPUME(mx),    .CPUWE(mw), .CPUDT(vid_Rce),

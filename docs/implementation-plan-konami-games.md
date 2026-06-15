@@ -90,9 +90,14 @@ Existing core (`rtl/fpga_nrx.v`, `nrx_video.v`, `nrx_sprite.v`, `nrx_sound.v`,
 
 ## 4. Implementation phases
 
-> **Progress:** Phase 0 ✅ done (commit `dadc4c9`). Phase 1 ✅ done. Phases 2–5 pending.
-> Deviation: the 14.318 MHz sound PLL output and audio-source mux (listed under Phase 0) were
-> moved to Phase 3, where the Konami sound subsystem that consumes them is built.
+> **Progress:** Phase 0 ✅ (`dadc4c9`), Phase 1 ✅ (`e15e51a`). Phase 2 split into sub-phases
+> for risk isolation (video can't be pixel-verified without ROMs/Quartus here):
+> 2a ✅ tilemap, 2b ⏳ sprites+dots+stars, 2c ⏳ rotation/visarea/palette-weighting. Phases 3–5 pending.
+> Deviations: the 14.318 MHz sound PLL output + audio mux moved to Phase 3 (consumer there);
+> the unified Konami ROM download map (program $0000, gfx1 $8000, dots $A000, palette $B000,
+> CLUT $B100, sound $C000) is implemented in the ROM gates and must be matched by the MRAs,
+> which place `<rom index="1">` (game byte) BEFORE `<rom index="0">` so is_konami is stable
+> during the main-ROM download.
 
 ### Phase 0 — Game-select scaffolding (`Arcade-RallyX.sv`)
 
