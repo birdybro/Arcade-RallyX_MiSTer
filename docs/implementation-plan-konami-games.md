@@ -90,6 +90,10 @@ Existing core (`rtl/fpga_nrx.v`, `nrx_video.v`, `nrx_sprite.v`, `nrx_sound.v`,
 
 ## 4. Implementation phases
 
+> **Progress:** Phase 0 ✅ done (commit `dadc4c9`). Phase 1 ✅ done. Phases 2–5 pending.
+> Deviation: the 14.318 MHz sound PLL output and audio-source mux (listed under Phase 0) were
+> moved to Phase 3, where the Konami sound subsystem that consumes them is built.
+
 ### Phase 0 — Game-select scaffolding (`Arcade-RallyX.sv`)
 
 1. Add a `<rom index="1">` one-byte game-select read in `emu`, mirroring the existing

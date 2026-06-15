@@ -208,10 +208,13 @@ localparam CONF_STR = {
 };
 
 
-reg [7:0] dips;
+reg [7:0] dips;     // DSW1 (Namco DSW / Konami DSW1)
+reg [7:0] dips2;    // DSW2 (Konami Loco-Motion only)
 always @(posedge clk_sys)
-	if (ioctl_wr && (ioctl_index==254) && (ioctl_addr==0))
-		dips <= ioctl_dout;
+	if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[24:1]) begin
+		if (ioctl_addr[0]) dips2 <= ioctl_dout;   // DIP word bits 15:8
+		else               dips  <= ioctl_dout;   // DIP word bits  7:0
+	end
 
 // Game-select byte, delivered via MRA <rom index="1">.
 //   0 = Rally-X        1 = New Rally-X     (Namco hardware)
@@ -376,6 +379,17 @@ wire			iRST  = RESET | status[0] | buttons[1] | rom_download;
 wire  [7:0] iCTR1 = ~{ m_coin1, m_start1, m_up1, m_down1, m_right1, m_left1, m_trig1, 1'b0 };
 wire  [7:0] iCTR2 = ~{ m_coin2, m_start2, m_up2, m_down2, m_right2, m_left2, m_trig2, bCabinet };
 
+// Konami Loco-Motion controls (active low). Common Jungler/Loco-Motion mapping;
+// per-game button/DSW-input nuances (Tactician/Commando 2nd button) are refined later.
+//   P1 ($A000): b7 COIN1, b6 COIN2, b5 right, b4 left, b3 button1, b2 service, b1 -, b0 up
+//   P2 ($A080): b7 START1, b6 START2, b5 left, b4 right, b3 button1, b2 -, b1 down, b0 up
+//   DSW1 ($A100): b7 = P1 down (live input), b6:0 = DIP bits
+//   DSW2 ($A180): DIP bits
+wire  [7:0] kP1   = ~{ m_coin1, m_coin2, m_right1, m_left1, m_trig1, 1'b0, 1'b0, m_up1 };
+wire  [7:0] kP2   = ~{ m_start1, m_start2, m_left2, m_right2, m_trig2, 1'b0, m_down2, m_up2 };
+wire  [7:0] kDSW1 = { ~m_down1, dips[6:0] };
+wire  [7:0] kDSW2 = dips2;
+
 wire  [7:0] oPIX;
 wire  [7:0] oSND;
 
@@ -384,7 +398,10 @@ fpga_NRX GameCore (
 	.GAME(game),
 	.HP(HPOS),.VP(VPOS),.PCLK(PCLK),
 	.POUT(oPIX),.SND(oSND),
-	.DSW(~dips),.CTR1(iCTR1),.CTR2(iCTR2),
+	.DSW (is_konami ? kDSW1 : ~dips),
+	.DSW2(kDSW2),
+	.CTR1(is_konami ? kP1 : iCTR1),
+	.CTR2(is_konami ? kP2 : iCTR2),
 	
 	.ROMCL(clk_sys),.ROMAD(ioctl_addr),.ROMDT(ioctl_dout),.ROMEN(ioctl_wr & rom_download),
 
